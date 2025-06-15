@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Shop.Application.Models;
+using Shop.Application.Interfaces;
 using Shop.Contracts;
-using Shop.Infrastructure;
 
 namespace Shop.Api.Controllers;
 
@@ -10,54 +8,39 @@ namespace Shop.Api.Controllers;
 [Route("api/[controller]")]
 public class CartsController : ControllerBase
 {
-    private readonly ShopDbContext _context;
+    private readonly ICartService _cartService;
 
-    public CartsController(ShopDbContext context)
+    public CartsController(ICartService cartService)
     {
-        _context = context;
+        _cartService = cartService;
     }
 
     
     [HttpGet("user/{userId}")]
     public async Task<IActionResult> GetCart(Guid userId)
     {
-        var cart = await _context.Carts
-            .Include(c => c.Items)
-            .ThenInclude(i => i.Product)
-            .FirstOrDefaultAsync(c => c.UserId == userId);
-
+        var cart = await _cartService.GetCartAsync(userId);
         if (cart is null) return NotFound("Cart not found.");
-        return Ok(cart);
+
+        var response = new CartResponseDto
+        {
+            UserId = cart.UserId,
+            Items = cart.Items.Select(item => new CartItemResponseDto
+            {
+                ProductId = item.ProductId,
+                ProductName = item.Product.Name,
+                UnitPrice = item.Product.Price,
+                Quantity = item.Quantity
+            }).ToList()
+        };
+
+        return Ok(response);
     }
 
     [HttpPost]
     public async Task<IActionResult> AddToCart([FromBody] AddToCartDto dto)
     {
-        var cart = await _context.Carts
-            .Include(c => c.Items)
-            .FirstOrDefaultAsync(c => c.UserId == dto.UserId);
-
-        if (cart is null)
-        {
-            cart = new Cart { UserId = dto.UserId };
-            _context.Carts.Add(cart);
-        }
-
-        var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == dto.ProductId);
-        if (existingItem != null)
-        {
-            existingItem.Quantity += dto.Quantity;
-        }
-        else
-        {
-            cart.Items.Add(new CartItem
-            {
-                ProductId = dto.ProductId,
-                Quantity = dto.Quantity
-            });
-        }
-
-        await _context.SaveChangesAsync();
+        await _cartService.AddToCartAsync(dto.UserId, dto.ProductId, dto.Quantity);
         return Ok();
     }
 }

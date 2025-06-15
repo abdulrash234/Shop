@@ -1,33 +1,32 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Shop.Application.Interfaces;
 using Shop.Contracts;
-using Shop.Infrastructure;
 
 namespace Shop.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public partial class ProductsController : ControllerBase
+public  class ProductsController : ControllerBase
 {
-    private readonly ShopDbContext _context;
+    private readonly IProductService _productService;
 
-    public ProductsController(ShopDbContext context)
+    public ProductsController(IProductService productService)
     {
-        _context = context;
+        _productService = productService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetProducts()
     {
-        var products = await _context.Products
-            .Select(p => new ProductDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Price = p.Price
-            })
-            .ToListAsync();
+        var products = await _productService.GetAllAsync();
+        
+        var response = products.Select(p => new ProductDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Price = p.Price,
+        }).ToList();
 
-        return Ok(products);
+        return Ok(response);
     }
 }

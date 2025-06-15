@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Shop.Application.Models;
+using Shop.Application.Interfaces;
 using Shop.Contracts;
-using Shop.Infrastructure;
 
 namespace Shop.Api.Controllers;
 
@@ -10,52 +8,39 @@ namespace Shop.Api.Controllers;
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
 {
-    private readonly ShopDbContext _context;
+    private readonly IOrderService _orderService;
 
-    public OrdersController(ShopDbContext context)
+    public OrdersController(IOrderService orderService)
     {
-        _context = context;
+        _orderService = orderService;
     }
     
     [HttpGet("user/{userId}")]
     public async Task<IActionResult> GetUserOrders(Guid userId)
     {
-        var orders = await _context.Orders
-            .Where(o => o.UserId == userId)
-            .Include(u => u.User)
-            .Include(o => o.Items)
-            .ThenInclude(i => i.Product)
-            .ToListAsync();
+        
+        var orders = await _orderService.GetOrdersForUserAsync(userId);
 
-        return Ok(orders);
+        var response = orders.Select(o => new OrderResponseDto
+        {
+            OrderId   = o.Id,
+            CreatedAt = o.CreatedAt,
+            Items = o.Items.Select(i => new OrderItemResponseDto
+            {
+                ProductId   = i.ProductId,
+                ProductName = i.Product.Name,
+                UnitPrice   = i.UnitPrice,
+                Quantity    = i.Quantity
+            }).ToList()
+        }).ToList();
+
+        return Ok(response);
     }
     
     [HttpPost("place")]
     public async Task<IActionResult> PlaceOrder([FromBody]PlaceOrderDto dto)
     {
-        var cart = await _context.Carts
-            .Include(c => c.Items)
-            .ThenInclude(i => i.Product)
-            .FirstOrDefaultAsync(c => c.UserId == dto.UserId);
-
-        if (cart == null || !cart.Items.Any()) return BadRequest("Cart is empty.");
-
-        var order = new Order
-        {
-            UserId = dto.UserId,
-            CreatedAt = DateTime.UtcNow,
-            Items = cart.Items.Select(ci => new OrderItem
-            {
-                ProductId = ci.ProductId,
-                Quantity = ci.Quantity,
-                UnitPrice = ci.Product.Price
-            }).ToList()
-        };
-
-        _context.Orders.Add(order);
-        cart.Items.Clear(); // Clear cart after placing order
-
-        await _context.SaveChangesAsync();
-        return Ok(new { order.Id });
+        var orderId = await _orderService.PlaceOrderAsync(dto.UserId);
+        return Ok(new { orderId });
     }
 }
