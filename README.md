@@ -30,7 +30,7 @@
 
 DESIGN CONSIDERATIONS
 
-## ✅ Code Quality
+##  Code Quality
 - Separation of responsibilities (Controller → Service → Repository)
 - Unit tests for services (Cart, Order, Product) using xUnit + NSubstitute
 - Business logic tested in isolation
