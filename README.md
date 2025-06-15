@@ -10,7 +10,6 @@
 - BackgroundService to generate pdf of users' monthly orders and email them.
 - Docker/docker-compose support for spinning up Postgres Db and smtp4dev for local testing
 - Auto-migration and seeding data (Products and User) in development
-- 
 
 ![Preview](architectural-drawing.png)
 
