@@ -40,6 +40,8 @@ public class CartsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddToCart([FromBody] AddToCartDto dto)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
         await _cartService.AddToCartAsync(dto.UserId, dto.ProductId, dto.Quantity);
         return Ok();
     }
