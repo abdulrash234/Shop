@@ -10,6 +10,13 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+  
+  smtp:
+    image: rnwood/smtp4dev
+    container_name: smtp4dev
+    ports:
+      - "3000:80"   # Web UI => http://localhost:3000
+      - "2525:25"
 
 volumes:
   postgres_data:

@@ -1,4 +1,6 @@
+using System.Net.Mail;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
 using Shop.Application.Interfaces;
 using Shop.Application.Services;
 using Shop.Infrastructure;
@@ -7,6 +9,10 @@ using Shop.Infrastructure.Repositories;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+//This is the free community license for QuestPDF. Please note this.
+QuestPDF.Settings.License = LicenseType.Community;
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -27,8 +33,20 @@ builder.Services.AddTransient<IOrderRepository, OrderRepository>();
 
 builder.Services.AddTransient<IProductService, ProductService>();
 builder.Services.AddTransient<IProductRepository, ProductRepository>();
+builder.Services.AddHostedService<MonthlyReportBackgroundService>();
+builder.Services.AddTransient<IMonthlyReportService, MonthlyReportService>();
+builder.Services.AddTransient<IUserRepository, UserRepository>();
 
 
+//hardcoded configuration for simplicity for sake of this demo.
+//In reality would use appsettings for the configuration
+builder.Services
+    .AddFluentEmail("noreply@shop.com", "Shop Admin")
+    .AddSmtpSender(new SmtpClient("localhost")
+    {
+        Port = 2525,     
+        EnableSsl = false
+    });
 
 var app = builder.Build();
 
